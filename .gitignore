@@ -1,0 +1,29 @@
+# 가상 환경 폴더 제외
+venv/
+.venv/
+env/
+lib/
+bin/
+include/
+
+# 자격 증명 및 환경 변수 파일 제외
+.env
+
+# 파이썬 캐시 파일
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# 에이전트 캐시 및 임시 산출물 제외
+.gemini/
+brain/
+scratch/
+
+# 시스템 파일
+.DS_Store
+Thumbs.db
