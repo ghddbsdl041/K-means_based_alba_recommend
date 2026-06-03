@@ -4,6 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.routers import recruitment
+from app.core.database import DatabaseManager
+from app.core.scheduler import start_sync_scheduler
+import asyncio
+
 
 # 기본적인 로깅 형식 설정
 logging.basicConfig(
@@ -41,6 +45,31 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # API 라우터 등록
 app.include_router(recruitment.router)
+
+scheduler_task = None
+
+@app.on_event("startup")
+async def startup_event():
+    global scheduler_task
+    logger.info("애플리케이션 시작: 데이터베이스 및 백그라운드 스케줄러 초기화...")
+    try:
+        await DatabaseManager.initialize_db()
+        # 백그라운드 스케줄러를 비동기 태스크로 가동
+        scheduler_task = asyncio.create_task(start_sync_scheduler())
+    except Exception as e:
+        logger.error(f"Startup 초기화 실패: {e}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("애플리케이션 종료: 리소스 정리...")
+    if scheduler_task:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
+    await DatabaseManager.close_db()
+
 
 @app.get("/", tags=["Root"])
 async def root():

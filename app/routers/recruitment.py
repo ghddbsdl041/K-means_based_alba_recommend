@@ -1,58 +1,68 @@
 import logging
-from fastapi import APIRouter, Query, HTTPException, Request
+from fastapi import APIRouter, Query, HTTPException, BackgroundTasks
 from typing import Optional, Dict, Any
-from app.services.recruitment import RecruitmentService
+from app.services.crawler import AlbaCrawlerService
+from app.core.database import DatabaseManager
+
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/recruitment", tags=["Recruitment"])
 
-@router.get("/jobs", summary="Search and list job openings")
-async def get_jobs(
-    keyword: Optional[str] = Query(None, description="검색 키워드 (예: '개발자', '쿠팡')"),
-    region: Optional[str] = Query(None, description="지역/자치구 이름 또는 고용24 지역 코드 (예: '강남구', '11000')"),
-    occupation: Optional[str] = Query(None, description="모집 직종 코드 또는 직무명"),
-    is_part_time: Optional[bool] = Query(None, description="알바/시간제 채용 공고만 필터링 여부"),
-    is_youth: Optional[bool] = Query(None, description="20대 청년층 타겟 채용 공고만 필터링 여부 (신입, 경력무관, 청년우대)"),
-    start_page: int = Query(1, ge=1, description="조회할 페이지 번호"),
-    display: int = Query(10, ge=1, le=500, description="페이지당 출력할 공고 개수"),
-    request: Request = None
+async def background_sync_jobs(site: str, limit: int):
+    try:
+        data = await AlbaCrawlerService.get_combined_jobs(site=site, limit=limit)
+        jobs = data.get("jobs", [])
+        if jobs:
+            await DatabaseManager.upsert_jobs(jobs)
+    except Exception as e:
+        logger.error(f"백그라운드 API 트리거 동기화 중 예외 발생: {e}")
+
+@router.get("/crawled-jobs", summary="Get crawled job openings from Albamon and Alba Heaven")
+async def get_crawled_jobs(
+    background_tasks: BackgroundTasks,
+    site: str = Query("all", description="크롤링할 대상 사이트 (all, albamon, albaheaven)"),
+    limit: int = Query(50, ge=1, le=2000, description="최대 조회 공고 개수 (최대 2000)"),
+    force_refresh: bool = Query(False, description="True 설정 시 DB 캐시를 거치지 않고 실시간 크롤링을 수행하여 DB를 강제 갱신한 뒤 즉시 반환합니다.")
 ):
     """
-    서울 열린데이터 광장(GetJobInfo)의 실시간 채용 정보 목록을 조회합니다.
-    다양한 필터 파라미터 및 페이징 규격을 지원하며, 모든 검색 제어는 백엔드 프록시 단에서 처리됩니다.
+    알바몬 및 알바천국의 서울 지역 전체 아르바이트 채용 공고 데이터를 실시간/캐시 방식으로 가져옵니다.
+    - force_refresh=False (기본값): DB에 저장된 캐시 목록을 1ms 내외로 초고속 반환하고, 동시에 백그라운드로 최신 데이터를 긁어와 DB를 실시간 갱신합니다.
+    - force_refresh=True: 실시간으로 직접 대량 크롤링을 대기하여 가져온 뒤 DB를 강제 갱신(Upsert)하고 그 결과를 리턴합니다.
     """
-    extra_params = {}
-    if request:
-        exclude_keys = {"keyword", "region", "occupation", "is_part_time", "is_youth", "start_page", "display"}
-        for k, v in request.query_params.items():
-            if k not in exclude_keys:
-                extra_params[k] = v
-
+    if site not in ("all", "albamon", "albaheaven"):
+        raise HTTPException(status_code=400, detail="site 파라미터는 'all', 'albamon', 'albaheaven' 중 하나여야 합니다.")
+        
     try:
-        data = await RecruitmentService.get_job_openings(
-            keyword=keyword,
-            region=region,
-            occupation=occupation,
-            is_part_time=is_part_time,
-            is_youth=is_youth,
-            start_page=start_page,
-            display=display,
-            extra_params=extra_params
-        )
+        # 1. 강제 실시간 크롤링 및 DB 갱신
+        if force_refresh:
+            data = await AlbaCrawlerService.get_combined_jobs(site=site, limit=limit)
+            jobs = data.get("jobs", [])
+            if jobs:
+                await DatabaseManager.upsert_jobs(jobs)
+            return data
+            
+        # 2. DB 캐시 데이터 조회
+        cached_jobs = await DatabaseManager.get_jobs(site=site, limit=limit)
+        
+        # 3. DB에 캐시 데이터가 존재하는 경우 (초고속 반환 및 백그라운드 갱신)
+        if cached_jobs:
+            sync_limit = max(2000, limit)
+            background_tasks.add_task(background_sync_jobs, site, sync_limit)
+            return {
+                "total": len(cached_jobs),
+                "site": site,
+                "jobs": cached_jobs
+            }
+            
+        # 4. DB 캐시 데이터가 전혀 없거나 DB 연결 실패한 경우 (실시간 크롤링으로 폴백)
+        logger.info("DB 캐시 데이터가 없거나 연결할 수 없습니다. 실시간 크롤링으로 응답합니다.")
+        data = await AlbaCrawlerService.get_combined_jobs(site=site, limit=limit)
+        jobs = data.get("jobs", [])
+        if jobs:
+            background_tasks.add_task(DatabaseManager.upsert_jobs, jobs)
         return data
-    except Exception as e:
-        logger.error(f"get_jobs 엔드포인트 호출 중 에러 발생: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/jobs/{wanted_auth_no}", summary="Get job opening details")
-async def get_job_detail(wanted_auth_no: str):
-    """
-    구인신청번호(JO_REQST_NO)를 기준으로 특정 구인 공고의 상세 요강 정보를 조회합니다.
-    """
-    try:
-        data = await RecruitmentService.get_job_detail(wanted_auth_no=wanted_auth_no)
-        return data
     except Exception as e:
-        logger.error(f"get_job_detail 엔드포인트 호출 중 에러 발생: {e}")
+        logger.error(f"get_crawled_jobs 엔드포인트 호출 중 에러 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))

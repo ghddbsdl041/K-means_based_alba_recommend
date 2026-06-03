@@ -21,9 +21,10 @@ gcloud config list
 gcloud run deploy alba-backend \
   --source . \
   --region us-central1 \
+  --project ounse-booth-2026 \
   --allow-unauthenticated \
   --min-instances=1 \
-  --set-env-vars="SEOUL_OPEN_DATA_API_KEY=724b6d48746b646837324259507a7a,DEBUG=False"
+  --set-env-vars="SEOUL_OPEN_DATA_API_KEY=724b6d48746b646837324259507a7a,DEBUG=False,DATABASE_URL=sqlite+aiosqlite:///alba.db"
 
 echo "[SUCCESS] GCP Cloud Run 컨테이너 배포 프로세스가 완료되었습니다!"
 echo "=========================================================="
