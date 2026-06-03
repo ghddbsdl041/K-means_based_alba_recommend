@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 # FastAPI 애플리케이션 초기화
 app = FastAPI(
-    title="서울 열린데이터 광장 채용 정보 연동 API Gateway",
-    description="서울시 일자리포털 채용 정보 오픈API를 안전하고 신속하게 연동하는 비동기 FastAPI 백엔드 프록시 서버입니다.",
+    title="알바몬 & 알바천국 서울 아르바이트 통합 캐시 API Gateway",
+    description="알바몬 및 알바천국에서 수집한 서울 지역 아르바이트 정보를 캐싱하여 초고속으로 서빙하는 비동기 API 백엔드 서버입니다.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -78,7 +78,7 @@ async def root():
     """
     return {
         "status": "healthy",
-        "service": "Seoul Open Data API Gateway",
+        "service": "Albamon & AlbaHeaven Cached API Gateway",
         "version": "1.0.0",
         "documentation": "/docs"
     }
