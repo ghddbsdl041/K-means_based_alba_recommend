@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter, Query, HTTPException, BackgroundTasks
 from typing import Optional, Dict, Any
 from app.services.crawler import AlbaCrawlerService
+from app.services.preprocessing import PreprocessingService
 from app.core.database import DatabaseManager
 
 
@@ -59,4 +60,31 @@ async def get_crawled_jobs(
 
     except Exception as e:
         logger.error(f"get_crawled_jobs 엔드포인트 호출 중 에러 발생: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/preprocessed-jobs", summary="Get preprocessed job data for clustering")
+async def get_preprocessed_jobs(
+    limit: int = Query(50, ge=1, le=2000, description="최대 조회 공고 개수")
+):
+    """
+    수집된 공고 데이터를 클러스터링하기 위해 사진에 정의된 전처리 로직(피처 추출)을 거친 데이터를 확인하는 API입니다.
+    """
+    try:
+        # 1. DB에서 캐시된 데이터 가져오기 (가장 빠른 방법)
+        cached_jobs = await DatabaseManager.get_jobs(site="all", limit=limit)
+        
+        if not cached_jobs:
+            # DB에 없으면 크롤링
+            data = await AlbaCrawlerService.get_combined_jobs(site="all", limit=limit)
+            cached_jobs = data.get("jobs", [])
+            
+        # 2. 전처리 진행
+        preprocessed_data = PreprocessingService.preprocess_jobs(cached_jobs)
+        
+        return {
+            "total": len(preprocessed_data),
+            "data": preprocessed_data
+        }
+    except Exception as e:
+        logger.error(f"get_preprocessed_jobs 엔드포인트 호출 중 에러 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))
