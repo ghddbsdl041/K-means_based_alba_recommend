@@ -50,6 +50,21 @@ class DatabaseManager:
         if not cls.is_connected:
             logger.warning("데이터베이스가 준비되지 않아 DDL 초기화 단계를 건너뜁니다.")
             return
+
+        # 기존 테이블 스키마 확인 및 마이그레이션
+        try:
+            async with aiosqlite.connect(cls.db_path) as conn:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute("PRAGMA table_info(crawled_jobs)") as cursor:
+                    columns = [row["name"] for row in await cursor.fetchall()]
+                
+                # 신규 컬럼 중 category가 없으면 구버전 테이블이므로 드롭
+                if columns and "category" not in columns:
+                    logger.info("구버전 데이터베이스 테이블 감지. 테이블을 재생성합니다...")
+                    await conn.execute("DROP TABLE IF EXISTS crawled_jobs;")
+                    await conn.commit()
+        except Exception as e:
+            logger.error(f"테이블 스키마 확인 중 오류 발생: {e}")
             
         ddl = """
         CREATE TABLE IF NOT EXISTS crawled_jobs (
@@ -62,6 +77,13 @@ class DatabaseManager:
             work_time TEXT,
             register_date TEXT,
             detail_url TEXT,
+            category TEXT,
+            work_period TEXT,
+            work_days TEXT,
+            pay_type TEXT,
+            pay_amount INTEGER,
+            age TEXT,
+            conditions TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         """
@@ -94,8 +116,9 @@ class DatabaseManager:
             
         query = """
         INSERT INTO crawled_jobs (
-            wanted_auth_no, source, company_name, title, region, pay_info, work_time, register_date, detail_url
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            wanted_auth_no, source, company_name, title, region, pay_info, work_time, register_date, detail_url,
+            category, work_period, work_days, pay_type, pay_amount, age, conditions
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (wanted_auth_no)
         DO UPDATE SET
             company_name = EXCLUDED.company_name,
@@ -105,6 +128,13 @@ class DatabaseManager:
             work_time = EXCLUDED.work_time,
             register_date = EXCLUDED.register_date,
             detail_url = EXCLUDED.detail_url,
+            category = EXCLUDED.category,
+            work_period = EXCLUDED.work_period,
+            work_days = EXCLUDED.work_days,
+            pay_type = EXCLUDED.pay_type,
+            pay_amount = EXCLUDED.pay_amount,
+            age = EXCLUDED.age,
+            conditions = EXCLUDED.conditions,
             updated_at = CURRENT_TIMESTAMP;
         """
         
@@ -118,7 +148,14 @@ class DatabaseManager:
                 job.get("pay_info"),
                 job.get("work_time"),
                 job.get("register_date"),
-                job.get("detail_url")
+                job.get("detail_url"),
+                job.get("category"),
+                job.get("work_period"),
+                job.get("work_days"),
+                job.get("pay_type"),
+                job.get("pay_amount"),
+                job.get("age"),
+                job.get("conditions")
             )
             for job in jobs
         ]
@@ -146,53 +183,65 @@ class DatabaseManager:
             
         site = site.lower().strip()
         
+        # 중복 제거를 고려하여 여유있게 가져올 수량 설정 (최소 300개 또는 limit * 4)
+        query_limit = max(300, limit * 4)
+        
         if site == "all":
             query = """
-            SELECT wanted_auth_no, source, company_name, title, region, pay_info, work_time, register_date, detail_url
+            SELECT wanted_auth_no, source, company_name, title, region, pay_info, work_time, register_date, detail_url,
+                   category, work_period, work_days, pay_type, pay_amount, age, conditions
             FROM crawled_jobs
-            WHERE rowid IN (
-                SELECT MAX(rowid)
-                FROM crawled_jobs
-                GROUP BY company_name, title
-            )
-            ORDER BY updated_at DESC, wanted_auth_no
+            ORDER BY updated_at DESC
             LIMIT ?;
             """
-            args = [limit]
+            args = [query_limit]
         else:
             query = """
-            SELECT wanted_auth_no, source, company_name, title, region, pay_info, work_time, register_date, detail_url
+            SELECT wanted_auth_no, source, company_name, title, region, pay_info, work_time, register_date, detail_url,
+                   category, work_period, work_days, pay_type, pay_amount, age, conditions
             FROM crawled_jobs
-            WHERE rowid IN (
-                SELECT MAX(rowid)
-                FROM crawled_jobs
-                WHERE LOWER(source) = ?
-                GROUP BY company_name, title
-            )
-            ORDER BY updated_at DESC, wanted_auth_no
+            WHERE LOWER(source) = ?
+            ORDER BY updated_at DESC
             LIMIT ?;
             """
-            args = [site, limit]
+            args = [site, query_limit]
             
         try:
             async with aiosqlite.connect(cls.db_path) as conn:
                 conn.row_factory = aiosqlite.Row
                 async with conn.execute(query, args) as cursor:
                     rows = await cursor.fetchall()
-                    return [
-                        {
-                            "source": row["source"],
-                            "wanted_auth_no": row["wanted_auth_no"],
-                            "company_name": row["company_name"],
-                            "title": row["title"],
-                            "region": row["region"],
-                            "pay_info": row["pay_info"],
-                            "work_time": row["work_time"],
-                            "register_date": row["register_date"],
-                            "detail_url": row["detail_url"]
-                        }
-                        for row in rows
-                    ]
+                    
+                    # Python 레벨에서 회사명 + 제목 기준으로 최신순 중복 제거
+                    seen = set()
+                    jobs = []
+                    for row in rows:
+                        company = row["company_name"]
+                        title = row["title"]
+                        key = (company, title)
+                        if key not in seen:
+                            seen.add(key)
+                            jobs.append({
+                                "source": row["source"],
+                                "wanted_auth_no": row["wanted_auth_no"],
+                                "company_name": company,
+                                "title": title,
+                                "region": row["region"],
+                                "pay_info": row["pay_info"],
+                                "work_time": row["work_time"],
+                                "register_date": row["register_date"],
+                                "detail_url": row["detail_url"],
+                                "category": row["category"] or "",
+                                "work_period": row["work_period"] or "",
+                                "work_days": row["work_days"] or "",
+                                "pay_type": row["pay_type"] or "",
+                                "pay_amount": row["pay_amount"] or 0,
+                                "age": row["age"] or "연령무관",
+                                "conditions": row["conditions"] or ""
+                            })
+                            if len(jobs) >= limit:
+                                break
+                    return jobs
         except Exception as e:
             logger.error(f"SQLite 데이터 조회 중 오류 발생 (실시간 폴백): {e}")
             return []

@@ -42,26 +42,20 @@ async def get_crawled_jobs(
                 await DatabaseManager.upsert_jobs(jobs)
             return data
             
-        # 2. DB 캐시 데이터 조회
+        # 2. DB 캐시 데이터 조회 및 즉시 반환 (동기식 실시간 크롤링 폴백 원천 제거)
         cached_jobs = await DatabaseManager.get_jobs(site=site, limit=limit)
         
-        # 3. DB에 캐시 데이터가 존재하는 경우 (초고속 반환 및 백그라운드 갱신)
-        if cached_jobs:
-            sync_limit = max(2000, limit)
+        # 만약 DB 캐시가 완전히 비어있을 때만, 클라이언트를 대기시키지 않고 백그라운드 태스크로 동기화를 유도
+        if not cached_jobs:
+            logger.info("DB 캐시가 비어있습니다. 백그라운드에서 크롤링 동기화를 개시합니다.")
+            sync_limit = max(400, limit)
             background_tasks.add_task(background_sync_jobs, site, sync_limit)
-            return {
-                "total": len(cached_jobs),
-                "site": site,
-                "jobs": cached_jobs
-            }
             
-        # 4. DB 캐시 데이터가 전혀 없거나 DB 연결 실패한 경우 (실시간 크롤링으로 폴백)
-        logger.info("DB 캐시 데이터가 없거나 연결할 수 없습니다. 실시간 크롤링으로 응답합니다.")
-        data = await AlbaCrawlerService.get_combined_jobs(site=site, limit=limit)
-        jobs = data.get("jobs", [])
-        if jobs:
-            background_tasks.add_task(DatabaseManager.upsert_jobs, jobs)
-        return data
+        return {
+            "total": len(cached_jobs),
+            "site": site,
+            "jobs": cached_jobs
+        }
 
     except Exception as e:
         logger.error(f"get_crawled_jobs 엔드포인트 호출 중 에러 발생: {e}")
