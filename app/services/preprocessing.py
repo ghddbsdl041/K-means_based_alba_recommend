@@ -9,15 +9,31 @@ class PreprocessingService:
             # 텍스트 검색을 위해 모든 관련 문자열 필드를 하나로 합침
             full_text = f"{job.get('title', '')} {job.get('company_name', '')} {job.get('work_time', '')} {job.get('pay_info', '')} {job.get('conditions', '')} {job.get('work_days', '')} {job.get('work_period', '')} {job.get('category', '')}"
             
-            # 1. pay_amount (시급, 급여협의 예외 처리)
+            # 1. pay_amount (시급, 급여협의 예외 처리 및 단위 통일)
+            pay_type = job.get("pay_type", "시급")
             pay_info = job.get("pay_info", "")
             pay_numbers = re.sub(r'[^0-9]', '', pay_info)
             pay_amount = int(pay_numbers) if pay_numbers else 0
             
-            # K-Means를 위한 결측치 대체(Imputation): '급여협의' 등으로 시급이 0이거나 2026년 최저시급(10320) 미만인 경우
-            # K-Means 계산 시 왜곡(0원으로 인식)을 막기 위해 2026년 최저시급인 10320원으로 일괄 대체합니다.
+            # (추가 피처 생성용 임시 변수, 실제 시간 파싱은 뒤에서 이뤄지므로 기본값 8시간 가정)
+            temp_duration = 8 
+            
+            # 급여 단위를 '시급'으로 통일 (월급, 일급, 주급 변환)
+            if pay_type == "월급" or "월급" in pay_info:
+                pay_amount = pay_amount // 209 # 주휴수당 포함 월 기본 근로시간
+            elif pay_type == "일급" or "일급" in pay_info:
+                pay_amount = pay_amount // temp_duration
+            elif pay_type == "주급" or "주급" in pay_info:
+                pay_amount = pay_amount // (temp_duration * 5)
+            elif pay_type == "연봉" or "연봉" in pay_info:
+                pay_amount = pay_amount // (209 * 12)
+                
+            # 이상치(Outlier) 처리 (Clipping/Winsorization)
+            # K-Means 계산 시 왜곡을 막기 위해 시급 하한선(최저시급)과 상한선 설정
             if pay_amount < 10320:
                 pay_amount = 10320
+            if pay_amount > 50000:
+                pay_amount = 50000 # 지나치게 높은 시급(의도적 어그로, 오류)은 5만원으로 상한선 고정
             
             # 2. work_time (시간협의 예외 처리 및 근무 시간(duration) 계산 추가)
             work_time_str = job.get("work_time", "")
@@ -90,13 +106,24 @@ class PreprocessingService:
             # (8) 근무 시간대 파생 피처 (start_time 기준)
             # is_morning_shift: 06:00 ~ 11:59 시작
             # is_afternoon_shift: 12:00 ~ 17:59 시작
-            # is_night_shift: 18:00 ~ 익일 05:59 시작
+            # (8) 근무 시간대 (Shift) 이진 분류
             is_morning_shift = 1 if 6 <= start_time < 12 else 0
             is_afternoon_shift = 1 if 12 <= start_time < 18 else 0
             is_night_shift = 1 if start_time >= 18 or start_time < 6 else 0
             
+            # (9) 지역(Region) 파싱 (K-Means 학습용이 아닌, 사후 분석 및 필터링용 메타데이터)
+            # 예: "서울 강남구 역삼동" -> city: "서울", district: "강남구"
+            region_str = job.get("region", "")
+            region_parts = region_str.split(" ")
+            city = region_parts[0] if len(region_parts) > 0 and region_parts[0] else "알수없음"
+            district = region_parts[1] if len(region_parts) > 1 else "알수없음"
+            
             processed_data.append({
                 "original_job": job,
+                "location": {
+                    "city": city,
+                    "district": district
+                },
                 "features": {
                     "pay_amount": pay_amount,
                     "work_time": start_time,
