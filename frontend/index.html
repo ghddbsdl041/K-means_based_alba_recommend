@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 맞춤 알바 추천</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hidden {
+            display: none !important;
+            opacity: 0;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Titles and Texts */
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-align: center;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        p.desc {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* Buttons */
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 1.25rem;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Result Cards */
+        .job-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* Custom Scrollbar */
+        .job-list::-webkit-scrollbar { width: 6px; }
+        .job-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .job-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .job-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .job-card:hover {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary);
+        }
+
+        .job-badge {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .job-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .job-company {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .job-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .job-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--border);
+            border-bottom-color: var(--primary);
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+            margin: 0 auto 2rem auto;
+            display: block;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .badge-cluster {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+            border-radius: 12px;
+            border: 1px solid rgba(139,92,246,0.2);
+        }
+        .badge-cluster h3 {
+            color: #a78bfa;
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Step 0: Intro -->
+        <div id="step0" class="glass-card fade-in">
+            <h1>나의 알바 페르소나 찾기</h1>
+            <p class="desc">
+                빅데이터 K-Means AI 알고리즘이 5,000개의 알바 공고를 분석했습니다.<br>
+                단 5번의 클릭으로 내게 딱 맞는 알바 유형을 추천받으세요!
+            </p>
+            <button class="btn-primary" style="width: 100%;" onclick="goToStep(1)">테스트 시작하기 🚀</button>
+        </div>
+
+        <!-- Step 1: Question 1 -->
+        <div id="step1" class="glass-card hidden">
+            <span class="job-badge">Q 1/5</span>
+            <h2>현재 알바를 구하는 가장 큰 목적은 무엇인가요?</h2>
+            <div class="btn-container">
+                <button onclick="handleAnswer(1, 'A')">
+                    🔥 <strong>급전/단기</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        몸이 좀 힘들어도 짧고 굵게 일하고 당일 일당을 받고 싶어요!
+                    </span>
+                </button>
+                <button onclick="handleAnswer(1, 'B')">
+                    🌱 <strong>꾸준히/안정성</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        급전보다는 꾸준하게 출근하면서 안정적으로 돈을 모으고 싶어요.
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Question 2 -->
+        <div id="step2" class="glass-card hidden">
+            <span class="job-badge">Q 2/5</span>
+            <h2>일할 때 어떤 환경을 더 선호하시나요?</h2>
+            <div class="btn-container">
+                <button onclick="handleAnswer(2, 'A')">
+                    💻 <strong>실내/사무직</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        시원하고 쾌적한 실내에서 컴퓨터나 전화를 만지는 업무가 좋아요.
+                    </span>
+                </button>
+                <button onclick="handleAnswer(2, 'B')">
+                    🏃 <strong>현장/서비스직</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        몸을 움직이거나 사람을 직접 응대하는 서비스업이 적성에 맞아요.
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Question 3 -->
+        <div id="step3" class="glass-card hidden">
+            <span class="job-badge">Q 3/5</span>
+            <h2>원하시는 근무 형태와 시간은 어떻게 되시나요?</h2>
+            <div class="btn-container">
+                <button onclick="handleAnswer(3, 'A')">
+                    ⏱️ <strong>가벼운 파트타임</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        본업과 병행해서 하루 4~6시간 가볍게 일하고 싶어요. (4대보험 불필요)
+                    </span>
+                </button>
+                <button onclick="handleAnswer(3, 'B')">
+                    🏢 <strong>풀타임 정직원급</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        매장에 소속되어 8시간 이상 확실히 일하고 4대보험도 다 받고 싶어요.
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Question 4 -->
+        <div id="step4" class="glass-card hidden">
+            <span class="job-badge">Q 4/5</span>
+            <h2>어느 시간대에 일하는 것을 선호하시나요?</h2>
+            <div class="btn-container">
+                <button onclick="handleAnswer(4, 'A')">
+                    ☀️ <strong>아침~오후 (주간)</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        아침에 출근해서 해지기 전에 퇴근하는 바른 생활이 좋아요.
+                    </span>
+                </button>
+                <button onclick="handleAnswer(4, 'B')">
+                    🌙 <strong>저녁~새벽 (야간)</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        저녁이나 심야에 조용히 일하는 야행성 스케줄이 편해요.
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Question 5 -->
+        <div id="step5" class="glass-card hidden">
+            <span class="job-badge">Q 5/5</span>
+            <h2>원하시는 근무 요일은 언제인가요?</h2>
+            <div class="btn-container">
+                <button onclick="handleAnswer(5, 'A')">
+                    📅 <strong>평일 위주</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        평일에 일하고 주말(토,일)에는 푹 쉬고 싶어요.
+                    </span>
+                </button>
+                <button onclick="handleAnswer(5, 'B')">
+                    🎉 <strong>주말 위주</strong><br>
+                    <span style="font-size:0.9rem; color:#94a3b8; display:block; margin-top:0.5rem">
+                        평일엔 바빠서 주말에만 집중해서 일하고 싶어요.
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="glass-card hidden">
+            <span class="loader"></span>
+            <h2>AI가 알바몬 실시간 공고를 분석중입니다...</h2>
+            <p class="desc">회원님의 5가지 성향에 맞는 클러스터를 찾아 매칭하고 있습니다.</p>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="glass-card hidden">
+            <h1>분석 완료 🎉</h1>
+            <div class="badge-cluster">
+                <h3>회원님의 AI 페르소나</h3>
+                <h2 id="cluster-name" style="margin:0; font-size:1.8rem; color:#fff;">-</h2>
+            </div>
+            
+            <p style="font-weight:600; margin-bottom:1rem;">이런 알바는 어떠세요? (최신 공고)</p>
+            <div id="job-list-container" class="job-list">
+                <!-- Jobs will be injected here -->
+            </div>
+
+            <button class="btn-primary" style="width: 100%; margin-top: 2rem;" onclick="location.reload()">테스트 다시하기</button>
+        </div>
+
+    </div>
+
+    <script>
+        const answers = {
+            q1: null,
+            q2: null,
+            q3: null,
+            q4: null,
+            q5: null
+        };
+
+        function hideAll() {
+            document.querySelectorAll('.glass-card').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('fade-in');
+            });
+        }
+
+        function showElement(id) {
+            hideAll();
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            el.classList.add('fade-in');
+        }
+
+        function goToStep(step) {
+            showElement(`step${step}`);
+        }
+
+        function handleAnswer(question, answer) {
+            answers[`q${question}`] = answer;
+            
+            // 질문 흐름 제어
+            if (question === 1) {
+                if (answer === 'A') {
+                    // 급전/단기는 바로 4번(시간대)으로 점프
+                    goToStep(4);
+                } else {
+                    goToStep(2);
+                }
+            } else if (question === 2) {
+                if (answer === 'A') {
+                    // 사무직은 바로 4번으로 점프
+                    goToStep(4);
+                } else {
+                    goToStep(3);
+                }
+            } else if (question === 3) {
+                goToStep(4);
+            } else if (question === 4) {
+                goToStep(5);
+            } else if (question === 5) {
+                fetchRecommendations();
+            }
+        }
+
+        async function fetchRecommendations() {
+            showElement('loading');
+
+            const payload = {
+                q1_answer: answers.q1,
+                q2_answer: answers.q2,
+                q3_answer: answers.q3,
+                q4_answer: answers.q4,
+                q5_answer: answers.q5,
+                limit: 50
+            };
+
+            try {
+                // FastAPI 서버가 8000포트에서 실행중이라고 가정
+                const response = await fetch('http://127.0.0.1:8000/api/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('API Request Failed');
+
+                const jobs = await response.json();
+                renderJobs(jobs);
+
+            } catch (error) {
+                console.error(error);
+                alert("알바 추천을 가져오는 데 실패했습니다. 백엔드 서버가 켜져 있는지 확인해주세요.");
+                location.reload();
+            }
+        }
+
+        function renderJobs(jobs) {
+            if (!jobs || jobs.length === 0) {
+                alert("해당 조건에 맞는 알바 공고가 없습니다.");
+                location.reload();
+                return;
+            }
+
+            document.getElementById('cluster-name').innerText = jobs[0].cluster_name;
+            
+            const container = document.getElementById('job-list-container');
+            container.innerHTML = '';
+
+            jobs.forEach(job => {
+                const card = document.createElement('a');
+                card.className = 'job-card fade-in';
+                card.href = job.detail_url;
+                card.target = '_blank';
+                
+                card.innerHTML = `
+                    <span class="job-badge">${job.category.split(',')[0]}</span>
+                    <h3 class="job-title">${job.title}</h3>
+                    <div class="job-company">${job.company_name}</div>
+                    <div class="job-meta">
+                        <span>💰 ${job.pay_info}</span>
+                        <span>⏰ ${job.work_time}</span>
+                    </div>
+                    <div class="job-meta" style="margin-top:0.5rem; color:#94a3b8; font-size:0.8rem;">
+                        <span>📍 ${job.region}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            showElement('results');
+        }
+    </script>
+</body>
+</html>

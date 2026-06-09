@@ -43,8 +43,11 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": f"An unexpected server error occurred: {str(exc)}"}
     )
 
+from app.routers import recruitment, recommend
+
 # API 라우터 등록
 app.include_router(recruitment.router)
+app.include_router(recommend.router)
 
 scheduler_task = None
 
