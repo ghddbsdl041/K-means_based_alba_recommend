@@ -6,6 +6,7 @@ import type { SurveyAnswers, AnswerValue } from "../types/survey";
 import PersonaCard from "../components/result/PersonaCard";
 import JobList from "../components/result/JobList";
 import GuSelect from "../components/common/GuSelect";
+import { getTheme } from "../constants/clusterTheme";
 
 function PersonaSkeleton() {
   return (
@@ -111,7 +112,7 @@ export default function ResultPage() {
         >
           ← 다시 하기
         </button>
-        <span className="text-sm font-medium text-violet-600">성향 분석 결과</span>
+        <span className={`text-sm font-medium ${clusterId !== null ? getTheme(clusterId).summaryStrong : "text-violet-600"}`}>성향 분석 결과</span>
       </div>
 
       {/* 에러 */}
@@ -147,6 +148,7 @@ export default function ResultPage() {
             ) : (
               <JobList
                 jobs={jobs}
+                clusterId={clusterId}
                 preferredGus={preferredGus}
                 onShowAll={() => setPreferredGus([])}
                 onChangeGu={() => setShowGuSelector(true)}
