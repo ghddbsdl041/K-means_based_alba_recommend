@@ -64,16 +64,8 @@ async def recommend_jobs(survey: SurveyRequest):
     # 실시간 추천을 위해 매번 최신 데이터를 조회
     conn = sqlite3.connect(r'c:\Users\ap798\Desktop\alba-backend\alba.db')
     
-    # 알바몬과 알바천국 비율을 50:50으로 맞추기 위해 각각 1000개씩 추출 후 병합
-    query = """
-        SELECT * FROM (
-            SELECT * FROM crawled_jobs WHERE source = 'Albamon' ORDER BY RANDOM() LIMIT 1000
-        )
-        UNION ALL
-        SELECT * FROM (
-            SELECT * FROM crawled_jobs WHERE source = 'AlbaHeaven' ORDER BY RANDOM() LIMIT 1000
-        )
-    """
+    # 프론트엔드에 알바천국 데이터만 노출되도록 AlbaHeaven 소스만 추출
+    query = "SELECT * FROM crawled_jobs WHERE source = 'AlbaHeaven' ORDER BY RANDOM() LIMIT 2000"
     df = pd.read_sql_query(query, conn)
     conn.close()
     
