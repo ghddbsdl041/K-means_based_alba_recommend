@@ -64,8 +64,8 @@ async def recommend_jobs(survey: SurveyRequest):
     # 실시간 추천을 위해 매번 최신 데이터를 조회
     conn = sqlite3.connect(r'c:\Users\ap798\Desktop\alba-backend\alba.db')
     
-    # 프론트엔드에 알바천국 데이터만 노출되도록 AlbaHeaven 소스만 추출
-    query = "SELECT * FROM crawled_jobs WHERE source = 'AlbaHeaven' ORDER BY RANDOM() LIMIT 2000"
+    # 프론트엔드에 알바천국 데이터만 노출되도록 AlbaHeaven 소스만 추출 (최대 5000개로 확장)
+    query = "SELECT * FROM crawled_jobs WHERE source = 'AlbaHeaven' ORDER BY RANDOM() LIMIT 5000"
     df = pd.read_sql_query(query, conn)
     conn.close()
     
