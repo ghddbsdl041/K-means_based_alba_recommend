@@ -66,8 +66,8 @@ async def recommend_jobs(survey: SurveyRequest):
     db_path = settings.database_url.replace("sqlite+aiosqlite:///", "").replace("sqlite:///", "")
     conn = sqlite3.connect(db_path)
     
-    # 프론트엔드에 알바천국 데이터만 노출되도록 AlbaHeaven 소스만 추출 (최대 5000개로 확장)
-    query = "SELECT * FROM crawled_jobs WHERE source = 'AlbaHeaven' ORDER BY RANDOM() LIMIT 5000"
+    # 프론트엔드에 알바천국 및 알바몬 데이터를 모두 노출하도록 추출
+    query = "SELECT * FROM crawled_jobs WHERE source IN ('AlbaHeaven', 'Albamon')"
     df = pd.read_sql_query(query, conn)
     conn.close()
     
@@ -136,6 +136,7 @@ async def recommend_jobs(survey: SurveyRequest):
                 
             matched_jobs.append({
                 "score": score,
+                "source": job_info.get("source"),
                 "job": RecommendedJob(
                     cluster_id=int(pred_cluster),
                     cluster_name=cluster_name,
@@ -149,8 +150,29 @@ async def recommend_jobs(survey: SurveyRequest):
                 )
             })
             
-    # 스코어 기준 내림차순 정렬 후 요청한 개수(limit)만큼 반환
-    matched_jobs.sort(key=lambda x: x["score"], reverse=True)
-    recommended_jobs = [item["job"] for item in matched_jobs[:survey.limit]]
-                
+    # 알바천국 30% : 알바몬 70% 비율 조정을 위한 분할 및 정렬
+    heaven_jobs = [item for item in matched_jobs if item["source"] == "AlbaHeaven"]
+    mon_jobs = [item for item in matched_jobs if item["source"] == "Albamon"]
+    
+    heaven_jobs.sort(key=lambda x: x["score"], reverse=True)
+    mon_jobs.sort(key=lambda x: x["score"], reverse=True)
+    
+    # 목표 개수 계산
+    target_heaven = int(survey.limit * 0.3)
+    target_mon = survey.limit - target_heaven
+    
+    # 실제 추출 개수 결정 (한쪽에 데이터가 부족할 경우 다른 쪽에서 보충)
+    actual_heaven = min(target_heaven, len(heaven_jobs))
+    actual_mon = min(target_mon, len(mon_jobs))
+    
+    if actual_heaven < target_heaven:
+        actual_mon = min(survey.limit - actual_heaven, len(mon_jobs))
+    elif actual_mon < target_mon:
+        actual_heaven = min(survey.limit - actual_mon, len(heaven_jobs))
+        
+    # 병합 및 최종 스코어 내림차순 정렬
+    selected_items = heaven_jobs[:actual_heaven] + mon_jobs[:actual_mon]
+    selected_items.sort(key=lambda x: x["score"], reverse=True)
+    
+    recommended_jobs = [item["job"] for item in selected_items]
     return recommended_jobs

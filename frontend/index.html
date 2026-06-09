@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,7 +26,7 @@
 
         body {
             background-color: var(--bg-color);
-            background-image: 
+            background-image:
                 radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
                 radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
             color: var(--text-main);
@@ -63,8 +64,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Titles and Texts */
@@ -146,9 +154,19 @@
         }
 
         /* Custom Scrollbar */
-        .job-list::-webkit-scrollbar { width: 6px; }
-        .job-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
-        .job-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .job-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .job-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        .job-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
 
         .job-card {
             background: rgba(0, 0, 0, 0.2);
@@ -217,28 +235,35 @@
         }
 
         @keyframes rotation {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .badge-cluster {
             text-align: center;
             margin-bottom: 2rem;
             padding: 1rem;
-            background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
             border-radius: 12px;
-            border: 1px solid rgba(139,92,246,0.2);
+            border: 1px solid rgba(139, 92, 246, 0.2);
         }
+
         .badge-cluster h3 {
             color: #a78bfa;
             margin-bottom: 0.25rem;
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
-        
+
         <!-- Step 0: Intro -->
         <div id="step0" class="glass-card fade-in">
             <h1>나의 알바 페르소나 찾기</h1>
@@ -363,13 +388,14 @@
                 <h3>회원님의 AI 페르소나</h3>
                 <h2 id="cluster-name" style="margin:0; font-size:1.8rem; color:#fff;">-</h2>
             </div>
-            
+
             <p style="font-weight:600; margin-bottom:1rem;">이런 알바는 어떠세요? (최신 공고)</p>
             <div id="job-list-container" class="job-list">
                 <!-- Jobs will be injected here -->
             </div>
 
-            <button class="btn-primary" style="width: 100%; margin-top: 2rem;" onclick="location.reload()">테스트 다시하기</button>
+            <button class="btn-primary" style="width: 100%; margin-top: 2rem;" onclick="location.reload()">테스트
+                다시하기</button>
         </div>
 
     </div>
@@ -403,7 +429,7 @@
 
         function handleAnswer(question, answer) {
             answers[`q${question}`] = answer;
-            
+
             // 질문 흐름 제어
             if (question === 1) {
                 if (answer === 'A') {
@@ -437,7 +463,7 @@
                 q3_answer: answers.q3,
                 q4_answer: answers.q4,
                 q5_answer: answers.q5,
-                limit: 50
+                limit: 100
             };
 
             try {
@@ -468,7 +494,7 @@
             }
 
             document.getElementById('cluster-name').innerText = jobs[0].cluster_name;
-            
+
             const container = document.getElementById('job-list-container');
             container.innerHTML = '';
 
@@ -477,7 +503,7 @@
                 card.className = 'job-card fade-in';
                 card.href = job.detail_url;
                 card.target = '_blank';
-                
+
                 card.innerHTML = `
                     <span class="job-badge">${job.category.split(',')[0]}</span>
                     <h3 class="job-title">${job.title}</h3>
@@ -497,4 +523,5 @@
         }
     </script>
 </body>
+
 </html>
