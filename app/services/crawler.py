@@ -213,7 +213,7 @@ class AlbaCrawlerService:
                     
             time_str = time_str or "시간협의"
             reg_date = item.get("postedDate") or ""
-            detail_url = f"https://www.albamon.com/recruitment/detail/{recruit_no}"
+            detail_url = f"https://www.albamon.com/jobs/detail/{recruit_no}"
             
             # 직종(category) 가공
             parts = item.get("parts") or []

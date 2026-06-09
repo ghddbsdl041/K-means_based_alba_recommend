@@ -20,7 +20,7 @@ class SurveyRequest(BaseModel):
     q3_answer: Optional[str] = Field(None, description="Q3 대답 (A: 가벼운 파트타임, B: 풀타임 정규직급) - Q2가 B일 때만 필수")
     q4_answer: str = Field(..., description="Q4 대답 (A: 주간 선호, B: 야간 선호)")
     q5_answer: str = Field(..., description="Q5 대답 (A: 평일 위주, B: 주말 위주)")
-    limit: int = Field(50, description="반환할 추천 알바 개수")
+    limit: int = Field(100, description="반환할 추천 알바 개수")
 
 class RecommendedJob(BaseModel):
     cluster_id: int
@@ -62,7 +62,9 @@ async def recommend_jobs(survey: SurveyRequest):
     
     # 1. DB에서 최신 알바 공고 가져오기
     # 실시간 추천을 위해 매번 최신 데이터를 조회
-    conn = sqlite3.connect(r'c:\Users\ap798\Desktop\alba-backend\alba.db')
+    import os
+    db_path = settings.database_url.replace("sqlite+aiosqlite:///", "").replace("sqlite:///", "")
+    conn = sqlite3.connect(db_path)
     
     # 프론트엔드에 알바천국 데이터만 노출되도록 AlbaHeaven 소스만 추출 (최대 5000개로 확장)
     query = "SELECT * FROM crawled_jobs WHERE source = 'AlbaHeaven' ORDER BY RANDOM() LIMIT 5000"
@@ -81,8 +83,11 @@ async def recommend_jobs(survey: SurveyRequest):
     
     # 3. 모델 로드 및 실시간 추론 (Inference)
     try:
-        scaler = joblib.load(r'c:\Users\ap798\Desktop\alba-backend\app\models\scaler.pkl')
-        kmeans = joblib.load(r'c:\Users\ap798\Desktop\alba-backend\app\models\kmeans_k4.pkl')
+        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        scaler_path = os.path.join(app_dir, 'models', 'scaler.pkl')
+        kmeans_path = os.path.join(app_dir, 'models', 'kmeans_k4.pkl')
+        scaler = joblib.load(scaler_path)
+        kmeans = joblib.load(kmeans_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail="모델 파일을 찾을 수 없습니다. 학습이 완료되었는지 확인하세요.")
         
@@ -139,7 +144,7 @@ async def recommend_jobs(survey: SurveyRequest):
                     pay_info=job_info.get("pay_info", ""),
                     work_time=job_info.get("work_time", ""),
                     region=job_info.get("region", ""),
-                    detail_url=job_info.get("detail_url", ""),
+                    detail_url=job_info.get("detail_url", "").replace("/recruitment/", "/jobs/"),
                     category=job_info.get("category", "")
                 )
             })

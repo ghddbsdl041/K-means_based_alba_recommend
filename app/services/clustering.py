@@ -7,9 +7,13 @@ from sklearn.cluster import KMeans
 from app.services.preprocessing import PreprocessingService
 
 class ClusteringService:
-    def __init__(self, db_path: str = r'c:\Users\ap798\Desktop\alba-backend\alba.db'):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            from app.config import settings
+            db_path = settings.database_url.replace("sqlite+aiosqlite:///", "").replace("sqlite:///", "")
         self.db_path = db_path
-        self.models_dir = r'c:\Users\ap798\Desktop\alba-backend\app\models'
+        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.models_dir = os.path.join(app_dir, 'models')
         os.makedirs(self.models_dir, exist_ok=True)
         self.scaler_path = os.path.join(self.models_dir, 'scaler.pkl')
         self.model_path = os.path.join(self.models_dir, 'kmeans_k4.pkl')
