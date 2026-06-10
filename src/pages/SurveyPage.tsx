@@ -44,7 +44,7 @@ export default function SurveyPage() {
 
   if (phase === "gu") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-[#F0F4FF]">
         {/* 진행 표시 — Q6 위치 */}
         <div className="w-full max-w-xl mx-auto mb-8">
           <div className="flex items-center gap-3 mb-3">
