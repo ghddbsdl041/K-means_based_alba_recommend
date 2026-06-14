@@ -66,13 +66,16 @@ async def recommend_jobs(survey: SurveyRequest):
     db_path = settings.database_url.replace("sqlite+aiosqlite:///", "").replace("sqlite:///", "")
     conn = sqlite3.connect(db_path)
     
-    # 프론트엔드에 알바천국 및 알바몬 데이터를 모두 노출하도록 추출
-    query = "SELECT * FROM crawled_jobs WHERE source IN ('AlbaHeaven', 'Albamon')"
+    # 프론트엔드에 알바천국 및 알바몬 데이터를 모두 노출하도록 추출 (최신 공고 순정렬)
+    query = "SELECT * FROM crawled_jobs WHERE source IN ('AlbaHeaven', 'Albamon') ORDER BY updated_at DESC"
     df = pd.read_sql_query(query, conn)
     conn.close()
     
     if df.empty:
         raise HTTPException(status_code=404, detail="추천할 알바 데이터가 없습니다.")
+
+    # 회사명 + 제목 기준으로 중복 제거 (가장 최신 등록된 공고만 유지)
+    df = df.drop_duplicates(subset=['company_name', 'title'], keep='first')
 
     # 2. 전처리 파이프라인 수행
     jobs_dict = df.to_dict('records')
