@@ -117,21 +117,29 @@ npm run build
 npm run preview
 ```
 
-### 6.2. Backend (참고용 실행 방법)
+### 6.2. Backend (실행 방법)
 
-FastAPI 백엔드는 별도의 환경에서 실행하거나 아래와 같이 실행할 수 있습니다. Python 3.10 버전 이상을 권장합니다.
+FastAPI 백엔드는 Python 3.10 버전 이상을 권장하며, 로컬 환경에서 다음과 같이 실행할 수 있습니다.
 
 ```bash
-# 1. 가상환경 생성 및 활성화
-cd alba-recommend/backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# 1. backend 디렉터리로 이동
+cd backend
 
-# 2. 필요 패키지 설치
+# 2. .env 파일 생성 (.env.example 파일 기반)
+cp .env.example .env
+
+# 3. 가상환경 생성 및 활성화
+python -m venv venv
+source venv/bin/activate  # Windows (CMD): venv\Scripts\activate.bat, (PowerShell): .\venv\Scripts\Activate.ps1
+
+# 4. 의존성 패키지 설치
 pip install -r requirements.txt
 
-# 3. FastAPI uvicorn 서버 실행
-uvicorn main:app --reload --port 8000
+# 5. FastAPI uvicorn 서버 실행 (실행 모듈 app.main:app 주의)
+uvicorn app.main:app --reload --port 8000
 ```
-- 실행 시 `http://127.0.0.1:8000/docs`에서 Swagger API 문서를 확인할 수 있습니다.
-- 백엔드 주소 환경변수를 변경하려면 프론트엔드의 `src/lib/api.ts` 내부의 `API_URL` 상수를 수정하십시오.
+- **OS별 자동 실행 스크립트 (Windows)**:
+  - CMD 환경: `run.bat` 더블 클릭 혹은 실행
+  - PowerShell 환경: `.\run.ps1` 실행
+- 실행 후 브라우저에서 `http://127.0.0.1:8000/docs`로 접속하면 Swagger API 문서를 확인하고 테스트할 수 있습니다.
+- API 서버 연동 주소는 프론트엔드의 `frontend/src/lib/api.ts` 내부 `API_URL` 상수에 정의되어 있습니다.
