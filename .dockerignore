@@ -1,0 +1,32 @@
+# 로컬 개발 가상환경 및 종속성 차단
+venv/
+.venv/
+env/
+
+# 환경 변수 자격 증명 차단
+.env
+.env.example
+
+# Git 설정 폴더
+.git/
+.gitignore
+
+# 파이썬 컴파일 캐시 및 테스트 캐시
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 에이전트 생성 임시 산출물 및 문서
+.gemini/
+brain/
+scratch/
+walkthrough.md
+implementation_plan.md
+task.md
+deploy.sh
+Dockerfile
+.dockerignore

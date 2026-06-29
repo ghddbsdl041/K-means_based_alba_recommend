@@ -1,0 +1,41 @@
+# gcloud 업로드 제외 파일 설정 (.gcloudignore)
+
+# Git 관련 파일 제외
+.git/
+.gitignore
+
+# 가상환경 및 종속성 라이브러리 폴더 제외 (빌드 시 Cloud Build에서 설치하므로 업로드 필요 없음)
+venv/
+.venv/
+env/
+lib/
+bin/
+include/
+
+# 로컬 환경 변수 파일 제외
+.env
+
+# SQLite 로컬 데이터베이스 제외 (배포 대상에서 제외)
+# alba.db
+
+# 파이썬 캐시 파일 및 컴파일 산출물 제외
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# AI 에이전트 작업 폴더 및 임시 산출물 제외
+.gemini/
+brain/
+scratch/
+walkthrough.md
+implementation_plan.md
+task.md
+
+# 도커 및 배포 스크립트 설정
+.dockerignore
+deploy.sh

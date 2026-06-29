@@ -23,3 +23,30 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Python virtual environment
+venv/
+.venv/
+env/
+lib/
+bin/
+include/
+
+# Credentials and env files
+.env
+
+# Python cache files
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Agent caches and temporary artifacts
+.gemini/
+brain/
+scratch/
+Thumbs.db
